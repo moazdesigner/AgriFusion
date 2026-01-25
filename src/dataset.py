@@ -30,4 +30,25 @@ class SoilHealthDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        pass
+        # Get the text description and label
+        text = str(self.data.iloc[idx]['text_description'])
+        label_str = self.data.iloc[idx]['deficiency_label']
+        label = self.label_map.get(label_str, 0) # Default to 0 if not found
+        
+        # Tokenize text
+        encoding = self.tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_len,
+            return_token_type_ids=False,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
+
+        return {
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'label': torch.tensor(label, dtype=torch.long)           
+        }
