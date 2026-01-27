@@ -30,12 +30,11 @@ class SoilHealthDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # Get the text description and label
+        # Text Processing
         text = str(self.data.iloc[idx]['text_description'])
         label_str = self.data.iloc[idx]['deficiency_label']
-        label = self.label_map.get(label_str, 0) # Default to 0 if not found
+        label = self.label_map.get(label_str, 0)
         
-        # Tokenize text
         encoding = self.tokenizer.encode_plus(
             text,
             add_special_tokens=True,
@@ -47,8 +46,22 @@ class SoilHealthDataset(Dataset):
             return_tensors='pt',
         )
 
+        # Image Processing
+        img_path = self.data.iloc[idx]['image_path']
+        
+        # Handle cases where image might be missing or path is wrong
+        try:
+            image = Image.open(img_path).convert("RGB")
+        except (OSError, FileNotFoundError):
+            # Fallback for missing images (create a black image)
+            image = Image.new('RGB', (224, 224), color='black')
+            
+        if self.transform:
+            image = self.transform(image)
+
         return {
             'input_ids': encoding['input_ids'].flatten(),
             'attention_mask': encoding['attention_mask'].flatten(),
-            'label': torch.tensor(label, dtype=torch.long)           
+            'pixel_values': image,  # This is the new image tensor
+            'label': torch.tensor(label, dtype=torch.long)
         }
