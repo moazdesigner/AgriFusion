@@ -24,3 +24,18 @@ def verify_image_paths(df, col_name='image_path'):
             missing += 1
     print(f"Verified {total} images. Missing: {missing}")
     return missing
+def save_checkpoint(model, optimizer, filename="best_model.pth"):
+    """Saves the model and optimizer state."""
+    state = {
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+    }
+    torch.save(state, filename)
+    print(f"Model saved to {filename}")
+
+def load_checkpoint(model, filename="best_model.pth", device="cpu"):
+    """Loads model weights."""
+    checkpoint = torch.load(filename, map_location=device)
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+    return model
