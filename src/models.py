@@ -1,5 +1,6 @@
 import torch.nn as nn
 from transformers import DistilBertModel
+import torchvision.models as models
 
 class SoilTextEncoder(nn.Module):
     def __init__(self, pretrained_model_name='distilbert-base-uncased', freeze_bert=True):
@@ -20,3 +21,25 @@ class SoilTextEncoder(nn.Module):
         cls_token_emb = hidden_state[:, 0, :]
         
         return cls_token_emb
+class SoilImageEncoder(nn.Module):
+    def __init__(self, output_dim=512, freeze_resnet=True):
+        super(SoilImageEncoder, self).__init__()
+        # Load pre-trained ResNet18
+        resnet = models.resnet18(pretrained=True)
+        
+        # Removing the last classification layer (fc)
+        # Only want the features (embeddings)
+        modules = list(resnet.children())[:-1]
+        self.resnet = nn.Sequential(*modules)
+        
+        # Freeze ResNet weights
+        if freeze_resnet:
+            for param in self.resnet.parameters():
+                param.requires_grad = False
+                
+    def forward(self, images):
+        # Input shape: (Batch, 3, 224, 224)
+        features = self.resnet(images)
+        
+        # Output shape is (Batch, 512, 1, 1), so we flatten it
+        return features.view(features.size(0), -1)    
