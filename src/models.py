@@ -1,6 +1,7 @@
 import torch.nn as nn
 from transformers import DistilBertModel
 import torchvision.models as models
+import torch
 
 class SoilTextEncoder(nn.Module):
     def __init__(self, pretrained_model_name='distilbert-base-uncased', freeze_bert=True):
@@ -43,3 +44,32 @@ class SoilImageEncoder(nn.Module):
         
         # Output shape is (Batch, 512, 1, 1), so we flatten it
         return features.view(features.size(0), -1)    
+class AgriFusionModel(nn.Module):
+    def __init__(self, num_classes=4, freeze_backbones=True):
+        super(AgriFusionModel, self).__init__()
+        # Initialize the two branches
+        self.text_encoder = SoilTextEncoder(freeze_bert=freeze_backbones)
+        self.image_encoder = SoilImageEncoder(freeze_resnet=freeze_backbones)
+        
+        # Define the fusion layer
+        # Text (768 from DistilBERT) + Image (512 from ResNet18) = 1280
+        self.fusion_dim = 768 + 512
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(self.fusion_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, num_classes)
+        )
+        
+    def forward(self, input_ids, attention_mask, images):
+        # Get features from both branches
+        text_features = self.text_encoder(input_ids, attention_mask)
+        image_features = self.image_encoder(images)
+        
+        # Concatenate features
+        combined_features = torch.cat((text_features, image_features), dim=1)
+        
+        # Pass through classifier
+        output = self.classifier(combined_features)
+        return output    
