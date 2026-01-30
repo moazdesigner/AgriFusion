@@ -35,11 +35,11 @@ class SoilHealthDataset(Dataset):
         label_str = self.data.iloc[idx]['deficiency_label']
         label = self.label_map.get(label_str, 0)
         
-        encoding = self.tokenizer.encode_plus(
+        # Tokenize text (Updated method)
+        encoding = self.tokenizer(
             text,
             add_special_tokens=True,
             max_length=self.max_len,
-            return_token_type_ids=False,
             padding='max_length',
             truncation=True,
             return_attention_mask=True,
